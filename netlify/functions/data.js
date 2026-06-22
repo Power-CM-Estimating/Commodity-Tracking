@@ -1,6 +1,8 @@
 const { getStore } = require('@netlify/blobs');
 
 const UPLOAD_PASSWORD = process.env.UPLOAD_PASSWORD || 'PawnE4!';
+const SITE_ID = '9b5c99ed-3672-4fdb-ba75-729ce31f23f1';
+const TOKEN   = 'nfp_FEr8imVmE9S1TvwJtcRWQuyWUbRiCEmG0f5f';
 
 exports.handler = async (event) => {
   const headers = {
@@ -10,12 +12,11 @@ exports.handler = async (event) => {
     'Content-Type': 'application/json',
   };
 
-  // Handle CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers, body: '' };
   }
 
-  const store = getStore('snapshots');
+  const store = getStore({ name: 'snapshots', siteID: SITE_ID, token: TOKEN });
 
   // ── GET — load all snapshots (public, no password needed) ──
   if (event.httpMethod === 'GET') {
