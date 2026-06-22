@@ -1,0 +1,1571 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chris's Commodity Tracker</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  /* ── Sidebar / sage-teal zone ── */
+  --sb-bg:      #e8f2ef;
+  --sb-bg2:     #daeee9;
+  --sb-bg3:     #cce8e1;
+  --sb-border:  #b0d4cc;
+  --sb-border2: #8cbdb3;
+  --sb-text:    #1a3530;
+  --sb-text2:   #2d5a52;
+  --sb-text3:   #5a8c82;
+
+  /* ── Main / light zone ── */
+  --bg:         #f0f2f7;
+  --bg2:        #ffffff;
+  --bg3:        #f5f7fc;
+  --bg4:        #eaecf5;
+  --border:     #dde1ee;
+  --border2:    #c8cedf;
+  --text:       #1e2340;
+  --text2:      #4a5278;
+  --text3:      #8892b0;
+
+  /* ── Topbar ── */
+  --bar-bg:     #1e4a42;
+  --bar-border: #2a6058;
+
+  /* ── Accent & status colors ── */
+  --accent:     #d4891a;
+  --accent2:    rgba(212,137,26,.12);
+  --green:      #1a9e6a;
+  --green2:     rgba(26,158,106,.10);
+  --red:        #d94f4f;
+  --red2:       rgba(217,79,79,.10);
+  --blue:       #2f7fd4;
+  --blue2:      rgba(47,127,212,.10);
+
+  --mono: 'Courier New', monospace;
+  --head: 'Segoe UI', system-ui, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--head);
+  font-size: 13px;
+  min-height: 100vh;
+}
+
+/* ── TOP BAR ── */
+.topbar {
+  background: var(--bar-bg);
+  border-bottom: 1px solid var(--bar-border);
+  padding: 0 24px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.topbar-logo {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--accent);
+}
+.topbar-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,.45);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.topbar-sep { flex: 1; }
+.topbar-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.topbar-stat-val {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+.topbar-stat-lbl {
+  font-size: 10px;
+  color: rgba(255,255,255,.45);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.topbar-divider {
+  width: 1px;
+  height: 28px;
+  background: rgba(255,255,255,.15);
+}
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 0;
+  min-height: calc(100vh - 52px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--sb-bg);
+  border-right: 1px solid var(--sb-border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  color: var(--sb-text);
+}
+
+/* ── UPLOAD ZONE ── */
+.upload-zone {
+  border: 2px dashed var(--sb-border2);
+  border-radius: 6px;
+  padding: 28px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.upload-zone:hover, .upload-zone.drag { border-color: var(--accent); background: rgba(44,110,96,.08); }
+.upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.upload-icon { font-size: 28px; margin-bottom: 8px; }
+.upload-label { font-size: 13px; color: var(--sb-text2); line-height: 1.6; }
+.upload-label strong { color: var(--accent); }
+
+/* ── DATE INPUT ── */
+.date-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.field-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--sb-text3);
+  font-weight: 600;
+}
+.date-row input[type=date] {
+  width: 100%;
+  background: var(--sb-bg2);
+  border: 1px solid var(--sb-border2);
+  border-radius: 4px;
+  color: var(--sb-text);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+}
+.date-row input[type=date]:focus { border-color: var(--accent); }
+
+/* ── PARSE STATUS ── */
+.parse-status {
+  background: var(--sb-bg2);
+  border: 1px solid var(--sb-border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--sb-text3);
+  line-height: 1.7;
+  display: none;
+}
+.parse-status.ok { border-color: var(--green); color: var(--green); background: var(--green2); }
+.parse-status.err { border-color: var(--red); color: var(--red); background: var(--red2); }
+
+/* ── PREVIEW CARD ── */
+.preview-card {
+  background: var(--sb-bg2);
+  border: 1px solid var(--sb-border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: none;
+}
+.preview-card-header {
+  padding: 8px 12px;
+  background: var(--sb-bg3);
+  border-bottom: 1px solid var(--sb-border);
+  font-size: 11px;
+  color: var(--sb-text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+}
+.preview-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+}
+.preview-cell {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--sb-border);
+  border-right: 1px solid var(--sb-border);
+}
+.preview-cell:nth-child(even) { border-right: none; }
+.preview-cell-lbl { font-size: 10px; color: var(--sb-text3); margin-bottom: 2px; }
+.preview-cell-val { font-family: var(--mono); font-size: 12px; color: var(--sb-text); }
+.preview-cell-val.up { color: var(--red); }
+.preview-cell-val.dn { color: var(--green); }
+
+/* ── BUTTONS ── */
+.btn {
+  padding: 9px 16px;
+  border-radius: 4px;
+  border: none;
+  font-family: var(--head);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.btn:hover { opacity: .85; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+.btn-accent { background: var(--accent); color: #fff; width: 100%; }
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--sb-border2);
+  color: var(--sb-text2);
+  width: 100%;
+}.btn-danger {
+  background: var(--red2);
+  border: 1px solid var(--red);
+  color: var(--red);
+  padding: 5px 10px;
+  font-size: 11px;
+}
+
+/* ── HISTORY TABLE ── */
+.sidebar-history {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.history-entry {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+.history-entry.active { border-left: 2px solid var(--accent); background: rgba(44,110,96,.12) !important; }
+.history-date { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 600; flex: 1; }
+.history-avg { font-family: var(--mono); font-size: 11px; color: var(--sb-text2); }
+.history-chg { font-family: var(--mono); font-size: 10px; padding: 1px 5px; border-radius: 3px; font-weight: 600; }
+.history-chg.up { background: var(--red2); color: var(--red); }
+.history-chg.dn { background: var(--green2); color: var(--green); }
+.history-chg.flat { background: var(--sb-bg3); color: var(--sb-text3); }
+
+/* ── SIDEBAR TREE ── */
+.tree-year {
+  border: 1px solid var(--sb-border);
+  border-radius: 5px;
+  overflow: hidden;
+}
+.tree-year-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: linear-gradient(90deg, rgba(44,110,96,.15) 0%, rgba(44,110,96,.04) 100%);
+  border-left: 3px solid var(--accent);
+  cursor: pointer;
+  user-select: none;
+  transition: background .15s;
+}
+.tree-year-header:hover { background: linear-gradient(90deg, rgba(44,110,96,.25) 0%, rgba(44,110,96,.08) 100%); }
+.tree-year-caret {
+  font-size: 9px;
+  color: var(--sb-text3);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.tree-year-caret.open { transform: rotate(90deg); }
+.tree-year-label {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--accent);
+  flex: 1;
+}
+.tree-year-count {
+  font-size: 10px;
+  color: var(--sb-text3);
+  background: var(--sb-bg);
+  border: 1px solid var(--sb-border);
+  border-radius: 10px;
+  padding: 1px 6px;
+}
+.tree-months { display: none; }
+.tree-months.open { display: block; }
+.tree-month-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px 5px 20px;
+  background: var(--sb-bg2);
+  border-top: 1px solid var(--sb-border);
+  border-left: 3px solid var(--sb-border2);
+  cursor: pointer;
+  user-select: none;
+  transition: all .15s;
+}
+.tree-month-header:hover { background: var(--sb-bg3); border-left-color: var(--sb-text2); }
+.tree-month-caret {
+  font-size: 8px;
+  color: var(--sb-text3);
+  transition: transform .2s;
+  flex-shrink: 0;
+}
+.tree-month-caret.open { transform: rotate(90deg); }
+.tree-month-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sb-text2);
+  flex: 1;
+  letter-spacing: .03em;
+}
+.tree-month-count {
+  font-size: 10px;
+  color: var(--sb-text3);
+}
+.tree-entries { display: none; }
+.tree-entries.open { display: block; }
+.history-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 26px;
+  border-top: 1px solid var(--sb-border);
+  cursor: pointer;
+  transition: background .12s;
+}
+.history-entry:hover { background: var(--sb-bg3); }
+
+/* ── MAIN CONTENT ── */
+.main {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-x: auto;
+}
+
+/* ── SECTION HEADERS ── */
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text2);
+}
+.section-meta {
+  font-size: 11px;
+  color: var(--text3);
+  flex: 1;
+}
+
+/* ── TABS ── */
+.tab-bar {
+  display: flex;
+  gap: 6px;
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+}
+.tab-btn {
+  padding: 6px 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  color: var(--text3);
+  font-family: var(--head);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: all .15s;
+}
+.tab-btn:hover { color: var(--text2); border-color: var(--text3); background: var(--bg2); }
+.tab-btn.active {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── PRICE TABLE ── */
+.price-table-wrap { overflow-x: auto; }
+table.ptable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+table.ptable th {
+  padding: 7px 10px;
+  text-align: right;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text3);
+  font-weight: 700;
+  border-bottom: 2px solid var(--border);
+  white-space: nowrap;
+  background: var(--bg3);
+}
+table.ptable th:first-child { text-align: left; }
+table.ptable td {
+  padding: 6px 10px;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+}
+table.ptable td:first-child { text-align: left; color: var(--text); font-weight: 700; font-size: 13px; font-family: var(--mono); letter-spacing: .02em; }
+table.ptable tr:hover td { background: var(--bg4); }
+.chg-pill {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.chg-pill.up { background: var(--red2); color: var(--red); }
+.chg-pill.dn { background: var(--green2); color: var(--green); }
+.chg-pill.flat { color: var(--text3); }
+
+/* ── CHART ── */
+.chart-wrap {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 16px;
+  position: relative;
+}
+.chart-controls {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.chart-toggle {
+  padding: 4px 10px;
+  border-radius: 3px;
+  border: 1px solid var(--border2);
+  background: var(--bg2);
+  color: var(--text3);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: var(--mono);
+}
+.chart-toggle.on-cu { border-color: var(--accent); color: var(--accent); background: var(--accent2); }
+.chart-toggle.on-al { border-color: var(--blue); color: var(--blue); background: var(--blue2); }
+.chart-toggle.on-conduit { border-color: var(--green); color: var(--green); background: var(--green2); }
+canvas#trend-chart {
+  width: 100% !important;
+  height: 280px;
+}
+.chart-empty {
+  height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text3);
+  font-size: 12px;
+}
+
+/* ── CONDUIT TABLE SECTION HEADER ── */
+.conduit-group-header {
+  padding: 5px 10px;
+  background: var(--bg4);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text3);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── EMPTY STATE ── */
+.empty-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text3);
+  padding: 60px 0;
+}
+.empty-main-icon { font-size: 40px; opacity: .35; }
+.empty-main-msg { font-size: 14px; color: var(--text2); font-weight: 600; }
+.empty-main-sub { font-size: 12px; color: var(--text3); }
+
+/* ── CARD ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.card-header {
+  padding: 10px 14px;
+  background: var(--bg3);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.card-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text2);
+}
+.card-body { padding: 14px; }
+
+/* ── SUMMARY STAT ROW ── */
+.stat-row {
+  display: flex;
+  gap: 1px;
+  background: var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+.stat-cell {
+  flex: 1;
+  background: var(--bg2);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat-val {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.stat-lbl {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text3);
+}
+.stat-chg {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+}
+.stat-chg.up { color: var(--red); }
+.stat-chg.dn { color: var(--green); }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg3); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+/* Sidebar scrollbar stays teal */
+.sidebar::-webkit-scrollbar-track { background: var(--sb-bg2); }
+.sidebar::-webkit-scrollbar-thumb { background: var(--sb-border2); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-logo">Chris's Commodity Tracker</div>
+  <div class="topbar-sep"></div>
+  <div class="topbar-stat">
+    <div class="topbar-stat-val" id="hdr-cu">—</div>
+    <div class="topbar-stat-lbl">Avg Cu $/ft</div>
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-stat">
+    <div class="topbar-stat-val" id="hdr-al">—</div>
+    <div class="topbar-stat-lbl">Avg Al $/ft</div>
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-stat">
+    <div class="topbar-stat-val" id="hdr-snapshots">0</div>
+    <div class="topbar-stat-lbl">Snapshots</div>
+  </div>
+  <div class="topbar-divider"></div>
+  <div class="topbar-stat">
+    <div class="topbar-stat-val" id="hdr-date">—</div>
+    <div class="topbar-stat-lbl">Latest Date</div>
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+
+    <!-- Lock screen -->
+    <div id="lock-screen">
+      <div class="field-label" style="margin-bottom:8px;">Admin Access</div>
+      <div style="font-size:11px;color:var(--sb-text3);margin-bottom:10px;line-height:1.6;">Enter password to upload new price sheets</div>
+      <input type="password" id="password-input" placeholder="Password"
+        onkeydown="if(event.key==='Enter')checkPassword()"
+        style="width:100%;background:var(--sb-bg2);border:1px solid var(--sb-border2);border-radius:4px;color:var(--sb-text);font-size:13px;padding:8px 10px;outline:none;margin-bottom:8px;">
+      <button class="btn btn-accent" onclick="checkPassword()">Unlock</button>
+      <div id="lock-error" style="display:none;margin-top:8px;font-size:11px;color:var(--red);">Incorrect password</div>
+    </div>
+
+    <!-- Upload section — hidden until unlocked -->
+    <div id="upload-section" style="display:none;">
+      <div class="field-label" style="margin-bottom:8px;">Upload Efengee Quote Sheet</div>
+      <div class="upload-zone" id="upload-zone"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="handleDrop(event)">
+        <input type="file" accept=".xlsx,.xls" onchange="handleFile(this.files[0])">
+        <div class="upload-icon">📋</div>
+        <div class="upload-label">
+          <strong>Drop an .xlsx here</strong><br>
+          or click to browse
+        </div>
+      </div>
+      <div class="date-row" style="margin-top:12px;">
+        <div class="field-label">Quote Date</div>
+        <input type="date" id="quote-date">
+      </div>
+      <div id="parse-status" class="parse-status" style="margin-top:8px;"></div>
+      <div id="preview-card" class="preview-card" style="margin-top:8px;">
+        <div class="preview-card-header">Parsed Preview</div>
+        <div id="preview-grid" class="preview-grid"></div>
+      </div>
+      <button class="btn btn-accent" id="save-btn" onclick="saveSnapshot()" disabled style="margin-top:8px;">
+        Save Snapshot
+      </button>
+    </div>
+
+    <!-- History list -->
+    <div>
+      <div class="field-label" style="margin-bottom:8px;">Saved Snapshots</div>
+      <div class="sidebar-history" id="history-list">
+        <div style="font-size:11px;color:var(--text3);padding:8px 4px;">No snapshots yet — upload a sheet to start.</div>
+      </div>
+    </div>
+
+    <!-- Export -->
+    <div style="margin-top:auto;padding-top:8px;border-top:1px solid var(--sb-border);">
+      <button class="btn btn-ghost" onclick="exportHistory()">↓ Export History as CSV</button>
+    </div>
+
+  </div>
+
+  <!-- MAIN -->
+  <div class="main" id="main-content">
+    <div class="empty-main" id="empty-state">
+      <div class="empty-main-icon">📈</div>
+      <div class="empty-main-msg">No data yet</div>
+      <div class="empty-main-sub">Upload an Efengee quote sheet to get started</div>
+    </div>
+    <div id="data-view" style="display:none;display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Summary stats -->
+      <div class="stat-row" id="stat-row"></div>
+
+      <!-- Tabs -->
+      <div class="card">
+        <div class="tab-bar">
+          <button class="tab-btn active" onclick="switchTab('wire',this)">Wire Prices</button>
+          <button class="tab-btn" onclick="switchTab('conduit',this)">Conduit Prices</button>
+          <button class="tab-btn" onclick="switchTab('trend',this)">Price Trend</button>
+          <button class="tab-btn" onclick="switchTab('history',this)">History Table</button>
+        </div>
+
+        <!-- Wire tab -->
+        <div id="tab-wire" class="tab-panel active card-body" style="padding:0;">
+          <div class="price-table-wrap">
+            <table class="ptable" id="wire-table">
+              <thead>
+                <tr>
+                  <th>Wire Size</th>
+                  <th>Cu $/1000'</th>
+                  <th>Cu $/ft</th>
+                  <th>Al $/1000'</th>
+                  <th>Al $/ft</th>
+                  <th>Prior Cu</th>
+                  <th>Chg</th>
+                </tr>
+              </thead>
+              <tbody id="wire-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Conduit tab -->
+        <div id="tab-conduit" class="tab-panel" style="padding:0;">
+          <div class="price-table-wrap">
+            <table class="ptable" id="conduit-table">
+              <thead>
+                <tr>
+                  <th>Size</th>
+                  <th>EMT /100'</th>
+                  <th>Galv /100'</th>
+                  <th>IMC /100'</th>
+                  <th>Alum /100'</th>
+                  <th>PVC /100'</th>
+                  <th>Prior EMT</th>
+                  <th>Chg</th>
+                </tr>
+              </thead>
+              <tbody id="conduit-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Trend tab -->
+        <div id="tab-trend" class="tab-panel card-body">
+          <div class="chart-controls" id="chart-controls">
+            <button class="chart-toggle on-cu" onclick="toggleLine('cu_avg',this,'on-cu')">Avg Cu $/ft</button>
+            <button class="chart-toggle on-al" onclick="toggleLine('al_avg',this,'on-al')">Avg Al $/ft</button>
+            <button class="chart-toggle" onclick="toggleLine('emt_34',this,'on-conduit')">3/4" EMT</button>
+            <button class="chart-toggle" onclick="toggleLine('galv_34',this,'on-conduit')">3/4" Galv</button>
+            <button class="chart-toggle" onclick="toggleLine('emt_1',this,'on-conduit')">1" EMT</button>
+            <button class="chart-toggle" onclick="toggleLine('emt_2',this,'on-conduit')">2" EMT</button>
+          </div>
+          <div class="chart-wrap" style="padding:12px;">
+            <div id="chart-empty" class="chart-empty">Add at least 2 snapshots to see trends</div>
+            <canvas id="trend-chart" style="display:none;"></canvas>
+          </div>
+        </div>
+
+        <!-- History table tab -->
+        <div id="tab-history" class="tab-panel" style="padding:0;">
+          <div style="padding:10px 14px; background:var(--bg3); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <span style="font-size:11px; color:var(--text3); text-transform:uppercase; letter-spacing:.06em; font-weight:600;">Compare from:</span>
+            <select id="baseline-select" onchange="renderHistoryTable()"
+              style="background:var(--bg2); border:1px solid var(--border2); border-radius:4px; color:var(--text); font-family:var(--mono); font-size:12px; padding:5px 10px; outline:none; cursor:pointer;">
+              <option value="prior">Prior snapshot (default)</option>
+            </select>
+            <span id="baseline-desc" style="font-size:11px; color:var(--text3);"></span>
+          </div>
+          <div class="price-table-wrap">
+            <table class="ptable" id="history-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Avg Cu $/ft</th>
+                  <th>Avg Al $/ft</th>
+                  <th title="Multiply a CU price by this to get the AL equivalent (Al ÷ Cu)">Cu→Al ×</th>
+                  <th>3/4" EMT</th>
+                  <th>1" EMT</th>
+                  <th>2" EMT</th>
+                  <th>3/4" Galv</th>
+                  <th id="th-cu-chg">Cu Chg</th>
+                  <th id="th-al-chg">Al Chg</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const UPLOAD_PASSWORD = 'PawnE4!';
+
+// ── STATE ──
+let DB = { snapshots: [] };
+let pending = null;
+let activeSnapshotIdx = null;
+let chartInstance = null;
+let hiddenLines = new Set();
+let isUnlocked = false;
+let sessionPassword = '';
+
+// ── API HELPERS ──
+async function apiLoad() {
+  const res = await fetch('/.netlify/functions/data');
+  if (!res.ok) throw new Error('Load failed: ' + res.status);
+  return res.json();
+}
+
+async function apiSave(snap) {
+  const res = await fetch('/.netlify/functions/data', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-password': sessionPassword },
+    body: JSON.stringify(snap),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Save failed');
+  return data;
+}
+
+async function apiDelete(date) {
+  const res = await fetch('/.netlify/functions/data', {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', 'x-password': sessionPassword },
+    body: JSON.stringify({ date }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Delete failed');
+  return data;
+}
+
+async function loadData() {
+  setStatus('', '⟳ Loading snapshots…');
+  document.getElementById('parse-status') && (document.getElementById('parse-status').style.display = 'block');
+  try {
+    const snapshots = await apiLoad();
+    DB.snapshots = snapshots || [];
+    setStatus('', '');
+    document.getElementById('parse-status') && (document.getElementById('parse-status').style.display = 'none');
+    renderAll();
+  } catch(e) {
+    setStatus('err', '✗ Could not load data: ' + e.message);
+    console.error(e);
+  }
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById('parse-status');
+  if (!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  el.className = 'parse-status' + (type ? ' ' + type : '');
+  el.textContent = msg;
+}
+
+// ── PASSWORD LOCK ──
+async function checkPassword() {
+  const val = document.getElementById('password-input').value;
+  const errEl = document.getElementById('lock-error');
+  const btn = document.querySelector('#lock-screen .btn');
+  btn.disabled = true;
+  btn.textContent = 'Checking…';
+
+  // Verify password against server
+  try {
+    const res = await fetch('/.netlify/functions/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-password': val },
+      body: JSON.stringify({ date: '__test__', _test: true }),
+    });
+    // 200 or 400 (missing date handled server side) = password correct
+    // 401 = wrong password
+    if (res.status === 401) {
+      errEl.style.display = 'block';
+      errEl.textContent = 'Incorrect password';
+      document.getElementById('password-input').value = '';
+    } else {
+      sessionPassword = val;
+      isUnlocked = true;
+      document.getElementById('lock-screen').style.display = 'none';
+      document.getElementById('upload-section').style.display = 'block';
+    }
+  } catch(e) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Could not connect — try again';
+  }
+  btn.disabled = false;
+  btn.textContent = 'Unlock';
+}
+
+// ── FILE HANDLING ──
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('drag');
+  const f = e.dataTransfer.files[0];
+  if (f) handleFile(f);
+}
+
+function handleFile(file) {
+  if (!file) return;
+  const stat = document.getElementById('parse-status');
+  stat.style.display = 'block';
+  stat.className = 'parse-status';
+  stat.textContent = 'Reading file…';
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const parsed = parseEfengee(rows);
+      if (!parsed) throw new Error('Could not find expected CONDUIT / COPPER WIRE sections');
+      pending = parsed;
+      showPreview(parsed);
+      stat.className = 'parse-status ok';
+      stat.textContent = `✓ Parsed ${parsed.wire.length} wire sizes and ${parsed.conduit.length} conduit sizes`;
+      document.getElementById('save-btn').disabled = false;
+    } catch(err) {
+      stat.className = 'parse-status err';
+      stat.textContent = '✗ ' + err.message;
+      pending = null;
+      document.getElementById('save-btn').disabled = true;
+      document.getElementById('preview-card').style.display = 'none';
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── PARSER ── Efengee fixed-column layout
+// Layout (0-indexed columns):
+//   Conduit section (rows until blank gap):  A=size, B=EMT, C=Colored EMT, D=GALV, E=IMC, F=ALUM, G=PVC
+//   Wire section (rows 19+):                 A=CU size, B=CU price, C=AL size, D=AL price
+function parseEfengee(rows) {
+  const wire    = [];
+  const conduit = [];
+
+  // Canonical display names — keyed by what appears in col A/C (uppercase, trimmed)
+  const cuCanon = {
+    '14 SOL':'#14 SOL','12 SOL':'#12 SOL','10 SOL':'#10 SOL',
+    '14 STR':'#14','12 STR':'#12','10 STR':'#10',
+    '8 STR':'#8','6 STR':'#6','4 STR':'#4','3 STR':'#3',
+    '2 STR':'#2','1 STR':'#1',
+    '1/0 STR':'1/0','2/0 STR':'2/0','3/0 STR':'3/0','4/0 STR':'4/0',
+    '250 MCM':'250','300 MCM':'300','350 MCM':'350','400 MCM':'400',
+    '500 MCM':'500','600 MCM':'600','750 MCM':'750',
+  };
+  const alCanon = {
+    '6 STR':'#6','4 STR':'#4','2 STR':'#2','1 STR':'#1',
+    '1/0 STR':'1/0','2/0 STR':'2/0','3/0 STR':'3/0','4/0 STR':'4/0',
+    '250 MCM':'250','300 MCM':'300','350 MCM':'350','400 MCM':'400',
+    '500 MCM':'500','600 MCM':'600','750 MCM':'750',
+  };
+
+  // Helper: get numeric value from a cell (number or string), return null if not a valid positive number
+  const num = c => {
+    if (c === null || c === undefined || c === '') return null;
+    if (typeof c === 'number') return c > 0 ? c : null;
+    const n = parseFloat((c+'').replace(/[^0-9.]/g,''));
+    return (!isNaN(n) && n > 0) ? n : null;
+  };
+
+  let section = null; // 'conduit' | 'wire'
+  const cuData = {}; // canonical label → price/1000
+  const alData = {}; // canonical label → price/1000
+
+  for (const row of rows) {
+    // Normalize: keep raw values (numbers stay numbers, strings get trimmed)
+    const c = row.map(v => (typeof v === 'string' ? v.trim() : v));
+    const c0 = (c[0]+'').trim();
+    const c0up = c0.toUpperCase().replace(/\s+/g,' ').replace(/\u00a0/g,' ');
+    const joinedUp = c.map(v=>(v+'').toUpperCase()).join('|');
+
+    // ── Section detection ──
+    // Normalize non-breaking spaces before checking
+    const joinedNorm = joinedUp.replace(/\u00a0/g,' ');
+    if (joinedNorm.includes('CONDUIT') && joinedNorm.includes("100'")) { section='conduit'; continue; }
+    // Only switch to wire if COPPER WIRE appears in col 0 (not just anywhere in row)
+    const c0norm = c0up.replace(/\u00a0/g,' ');
+    if (c0norm.includes('COPPER') && c0norm.includes('WIRE'))   { section='wire';    continue; }
+    // Stop wire section only when STRIPED/PULLPRO appears in col 0 or col 4
+    const c4up = ((c[4]||'')+'').toUpperCase().replace(/\u00a0/g,' ');
+    if (section==='wire' && (c4up.includes('STRIPED') || c4up.includes('PULL') || c4up.includes('PULLPRO'))) {
+      // Don't stop — col 4 is the STRIPED column header in the wire section header row, skip it
+    }
+    if (c0norm.includes('STRIPED') || c0norm.includes('PULL PRO') || c0norm.includes('PULLPRO')) {
+      section=null; continue;
+    }
+    // Skip header rows
+    if (c0norm==='SIZE' || c0norm==='') continue;
+
+    // ── CONDUIT rows ── cols: 0=size, 1=EMT, 2=ColoredEMT, 3=GALV, 4=IMC, 5=ALUM, 6=PVC
+    if (section==='conduit') {
+      if (!/\d/.test(c[0])) continue; // must have a digit
+      conduit.push({
+        size: c[0],
+        emt:  num(c[1]),
+        galv: num(c[3]),
+        imc:  num(c[4]),
+        alum: num(c[5]),
+        pvc:  num(c[6]),
+      });
+    }
+
+    // ── WIRE rows ── cols: 0=CU size, 1=CU price, 2=AL size, 3=AL price
+    if (section==='wire') {
+      // CU: col 0 + col 1
+      const cuKey = cuCanon[c0norm];
+      if (cuKey) {
+        const price = num(c[1]);
+        if (price) cuData[cuKey] = price;
+      }
+      // AL: col 2 + col 3
+      const c2norm = ((c[2]||'')+'').trim().toUpperCase().replace(/\u00a0/g,' ').replace(/\s+/g,' ');
+      const alKey = alCanon[c2norm];
+      if (alKey) {
+        const price = num(c[3]);
+        if (price) alData[alKey] = price;
+      }
+    }
+  }
+
+  if (!Object.keys(cuData).length && !conduit.length) return null;
+
+  // Build wire array in canonical order, pairing CU + AL where available
+  // AL sizes that match CU canonical labels
+  const alByCuLabel = {
+    '#6':alData['#6']||null, '#4':alData['#4']||null, '#2':alData['#2']||null,
+    '#1':alData['#1']||null,
+    '1/0':alData['1/0']||null,'2/0':alData['2/0']||null,
+    '3/0':alData['3/0']||null,'4/0':alData['4/0']||null,
+    '250':alData['250']||null,'300':alData['300']||null,'350':alData['350']||null,
+    '400':alData['400']||null,'500':alData['500']||null,
+    '600':alData['600']||null,'750':alData['750']||null,
+  };
+
+  const cuOrder = [
+    '#14 SOL','#12 SOL','#10 SOL',
+    '#14','#12','#10','#8','#6','#4','#3','#2','#1',
+    '1/0','2/0','3/0','4/0',
+    '250','300','350','400','500','600','750',
+  ];
+  for (const key of cuOrder) {
+    if (cuData[key] !== undefined) {
+      wire.push({ size: key, cu: cuData[key], al: alByCuLabel[key]||null });
+    }
+  }
+
+  const avg = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : null;
+  // Avg $/ft — use STR sizes only (#14 STR through #1, then kcmil)
+  const cuFt = wire.filter(w=>w.cu && !w.size.includes('SOL')).map(w=>w.cu/1000);
+  const alFt = Object.values(alData).map(v=>v/1000);
+
+  return {
+    wire, conduit,
+    avgCu:  avg(cuFt),
+    avgAl:  avg(alFt),
+    emt34:  conduit.find(c=>c.size.replace(/\s/g,'').startsWith('3/4'))?.emt  || null,
+    galv34: conduit.find(c=>c.size.replace(/\s/g,'').startsWith('3/4'))?.galv || null,
+    emt1:   conduit.find(c=>c.size.replace(/\s/g,'').replace('\u201d','"').replace("'",'').startsWith('1"') || c.size.replace(/\s/g,'').startsWith('1"'))?.emt || null,
+    emt2:   conduit.find(c=>c.size.replace(/\s/g,'').startsWith('2"'))?.emt  || null,
+  };
+}
+
+function showPreview(p) {
+  const card = document.getElementById('preview-card');
+  const grid = document.getElementById('preview-grid');
+  card.style.display = '';
+
+  // Compare to prior snapshot
+  const prior = DB.snapshots.length ? DB.snapshots[DB.snapshots.length-1] : null;
+  const chgCu = prior && prior.avgCu ? ((p.avgCu-prior.avgCu)/prior.avgCu*100) : null;
+  const chgEmt = prior && prior.emt34 ? ((p.emt34-prior.emt34)/prior.emt34*100) : null;
+
+  const fmtChg = v => v===null?'':(v>0?`▲${v.toFixed(1)}%`:`▼${Math.abs(v).toFixed(1)}%`);
+  const cls = v => v===null?'':v>0?'up':'dn';
+
+  grid.innerHTML = `
+    <div class="preview-cell"><div class="preview-cell-lbl">Wire sizes found</div><div class="preview-cell-val">${p.wire.length}</div></div>
+    <div class="preview-cell"><div class="preview-cell-lbl">Conduit sizes</div><div class="preview-cell-val">${p.conduit.length}</div></div>
+    <div class="preview-cell"><div class="preview-cell-lbl">Avg Cu $/ft</div><div class="preview-cell-val ${cls(chgCu)}">$${p.avgCu?p.avgCu.toFixed(4):'—'} ${fmtChg(chgCu)}</div></div>
+    <div class="preview-cell"><div class="preview-cell-lbl">Avg Al $/ft</div><div class="preview-cell-val">${p.avgAl?'$'+p.avgAl.toFixed(4):'—'}</div></div>
+    <div class="preview-cell"><div class="preview-cell-lbl">3/4" EMT /100'</div><div class="preview-cell-val ${cls(chgEmt)}">$${p.emt34?p.emt34.toFixed(2):'—'} ${fmtChg(chgEmt)}</div></div>
+    <div class="preview-cell"><div class="preview-cell-lbl">1" EMT /100'</div><div class="preview-cell-val">$${p.emt1?p.emt1.toFixed(2):'—'}</div></div>
+  `;
+}
+
+// ── SAVE SNAPSHOT ──
+async function saveSnapshot() {
+  if (!pending) return;
+  const dateInput = document.getElementById('quote-date').value;
+  if (!dateInput) { alert('Set a quote date first'); return; }
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  setStatus('', '⟳ Saving to database…');
+  document.getElementById('parse-status').style.display = 'block';
+
+  try {
+    const snap = { date: dateInput, ...pending };
+    await apiSave(snap);
+
+    // Update local DB
+    DB.snapshots = DB.snapshots.filter(s => s.date !== dateInput);
+    DB.snapshots.push(snap);
+    DB.snapshots.sort((a,b) => a.date.localeCompare(b.date));
+
+    pending = null;
+    btn.textContent = 'Save Snapshot';
+    document.getElementById('parse-status').style.display = 'none';
+    document.getElementById('preview-card').style.display = 'none';
+
+    renderAll();
+    const idx = DB.snapshots.findIndex(s => s.date === dateInput);
+    selectSnapshot(idx);
+  } catch(e) {
+    setStatus('err', '✗ Save failed — ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Save Snapshot';
+  }
+}
+
+// ── RENDER EVERYTHING ──
+function renderAll() {
+  renderSidebar();
+  populateBaselineSelect();
+  updateTopbar();
+  if (DB.snapshots.length) {
+    document.getElementById('empty-state').style.display = 'none';
+    document.getElementById('data-view').style.display = 'flex';
+    const idx = activeSnapshotIdx !== null && DB.snapshots[activeSnapshotIdx]
+      ? activeSnapshotIdx : DB.snapshots.length - 1;
+    selectSnapshot(idx);
+  } else {
+    document.getElementById('empty-state').style.display = 'flex';
+    document.getElementById('data-view').style.display = 'none';
+  }
+}
+
+function updateTopbar() {
+  const latest = DB.snapshots[DB.snapshots.length-1];
+  document.getElementById('hdr-snapshots').textContent = DB.snapshots.length;
+  if (latest) {
+    document.getElementById('hdr-cu').textContent = latest.avgCu ? '$'+latest.avgCu.toFixed(4) : '—';
+    document.getElementById('hdr-al').textContent = latest.avgAl ? '$'+latest.avgAl.toFixed(4) : '—';
+    document.getElementById('hdr-date').textContent = fmtDate(latest.date);
+  } else {
+    document.getElementById('hdr-cu').textContent = '—';
+    document.getElementById('hdr-al').textContent = '—';
+    document.getElementById('hdr-date').textContent = '—';
+  }
+}
+
+// ── SIDEBAR TREE STATE ── persists which years/months are open
+const treeOpen = { years: {}, months: {} }; // years: {'2026':true}, months: {'2026-06':true}
+
+function toggleYear(year) {
+  treeOpen.years[year] = !treeOpen.years[year];
+  renderSidebar();
+}
+function toggleMonth(yearMonth) {
+  treeOpen.months[yearMonth] = !treeOpen.months[yearMonth];
+  renderSidebar();
+}
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+function renderSidebar() {
+  const el = document.getElementById('history-list');
+  if (!DB.snapshots.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--text3);padding:8px 4px;">No snapshots yet — upload a sheet to start.</div>';
+    return;
+  }
+
+  // Group: year → month → snapshots (newest first within each month)
+  const byYear = {}; // { '2026': { '06': [...snaps], '05': [...] } }
+  DB.snapshots.forEach((s, idx) => {
+    const [y, m] = s.date.split('-');
+    if (!byYear[y]) byYear[y] = {};
+    if (!byYear[y][m]) byYear[y][m] = [];
+    byYear[y][m].push({ s, idx });
+  });
+
+  // Auto-open current year + latest month on first render
+  const years = Object.keys(byYear).sort().reverse();
+  if (years.length && Object.keys(treeOpen.years).length === 0) {
+    treeOpen.years[years[0]] = true;
+    const months = Object.keys(byYear[years[0]]).sort().reverse();
+    if (months.length) treeOpen.months[years[0]+'-'+months[0]] = true;
+  }
+
+  el.innerHTML = years.map(year => {
+    const months = Object.keys(byYear[year]).sort().reverse();
+    const totalSnaps = months.reduce((n, m) => n + byYear[year][m].length, 0);
+    const yearOpen = !!treeOpen.years[year];
+
+    const monthsHtml = months.map(month => {
+      const ym = year + '-' + month;
+      const monthOpen = !!treeOpen.months[ym];
+      const entries = [...byYear[year][month]].reverse(); // newest first
+
+      const entriesHtml = entries.map(({ s, idx }) => {
+        const prior = idx > 0 ? DB.snapshots[idx-1] : null;
+        const chg = prior && prior.avgCu && s.avgCu ? (s.avgCu - prior.avgCu) / prior.avgCu * 100 : null;
+        const chgCls = chg === null ? 'flat' : chg > 0 ? 'up' : 'dn';
+        const chgTxt = chg === null ? '—' : (chg > 0 ? '▲' : '▼') + Math.abs(chg).toFixed(1) + '%';
+        const isLatest = idx === DB.snapshots.length - 1;
+        // Day display
+        const day = s.date.split('-')[2];
+        return `<div class="history-entry${activeSnapshotIdx === idx ? ' active' : ''}" onclick="selectSnapshot(${idx})">
+          <div class="history-date" style="font-size:12px;">${MONTH_NAMES[parseInt(month,10)-1]} ${parseInt(day,10)}${isLatest?' <span style="font-size:9px;color:var(--accent);font-weight:700;">●</span>':''}</div>
+          <div class="history-avg">${s.avgCu ? '$' + s.avgCu.toFixed(3) : '—'}</div>
+          <div class="history-chg ${chgCls}">${chgTxt}</div>
+        </div>`;
+      }).join('');
+
+      const monthLabel = MONTH_NAMES[parseInt(month,10)-1] + ' ' + year;
+      return `
+        <div class="tree-month-header" onclick="toggleMonth('${ym}')">
+          <span class="tree-month-caret${monthOpen?' open':''}">▶</span>
+          <span class="tree-month-label">${monthLabel}</span>
+          <span class="tree-month-count">${byYear[year][month].length}</span>
+        </div>
+        <div class="tree-entries${monthOpen?' open':''}">
+          ${entriesHtml}
+        </div>`;
+    }).join('');
+
+    return `<div class="tree-year">
+      <div class="tree-year-header" onclick="toggleYear('${year}')">
+        <span class="tree-year-caret${yearOpen?' open':''}">▶</span>
+        <span class="tree-year-label">${year}</span>
+        <span class="tree-year-count">${totalSnaps} snapshot${totalSnaps!==1?'s':''}</span>
+      </div>
+      <div class="tree-months${yearOpen?' open':''}">
+        ${monthsHtml}
+      </div>
+    </div>`;
+  }).join('<div style="height:6px;"></div>');
+}
+
+function selectSnapshot(idx) {
+  activeSnapshotIdx = idx;
+  const snap = DB.snapshots[idx];
+  const prior = idx > 0 ? DB.snapshots[idx-1] : null;
+  if (!snap) return;
+  renderSidebar();
+  renderStats(snap, prior);
+  renderWireTable(snap, prior);
+  renderConduitTable(snap, prior);
+  renderHistoryTable();
+  renderChart();
+}
+
+// ── STATS ──
+function renderStats(snap, prior) {
+  const chgCu = prior && prior.avgCu && snap.avgCu ? (snap.avgCu-prior.avgCu)/prior.avgCu*100 : null;
+  const chgAl = prior && prior.avgAl && snap.avgAl ? (snap.avgAl-prior.avgAl)/prior.avgAl*100 : null;
+  const chgEmt = prior && prior.emt34 && snap.emt34 ? (snap.emt34-prior.emt34)/prior.emt34*100 : null;
+  const chgGalv = prior && prior.galv34 && snap.galv34 ? (snap.galv34-prior.galv34)/prior.galv34*100 : null;
+
+  const cell = (val, lbl, chg) => {
+    const chgCls = chg===null?'':chg>0?'up':'dn';
+    const chgTxt = chg===null?'—':(chg>0?'▲':'▼')+Math.abs(chg).toFixed(2)+'%';
+    return `<div class="stat-cell">
+      <div class="stat-val">${val}</div>
+      <div class="stat-lbl">${lbl}</div>
+      ${chg!==null?`<div class="stat-chg ${chgCls}">${chgTxt} vs prior</div>`:''}
+    </div>`;
+  };
+
+  document.getElementById('stat-row').innerHTML =
+    cell(snap.avgCu?'$'+snap.avgCu.toFixed(4):'—','Avg Cu $/ft',chgCu)+
+    cell(snap.avgAl?'$'+snap.avgAl.toFixed(4):'—','Avg Al $/ft',chgAl)+
+    cell(snap.emt34?'$'+snap.emt34.toFixed(2):'—','3/4" EMT /100\'',chgEmt)+
+    cell(snap.galv34?'$'+snap.galv34.toFixed(2):'—','3/4" Galv /100\'',chgGalv)+
+    cell(fmtDate(snap.date),'Snapshot Date',null);
+}
+
+// ── WIRE TABLE ──
+function renderWireTable(snap, prior) {
+  const tbody = document.getElementById('wire-body');
+  tbody.innerHTML = snap.wire.map(w => {
+    const priorW = prior?.wire?.find(p=>p.size===w.size);
+    const cuPrior = priorW?.cu;
+    const chg = cuPrior && w.cu ? (w.cu-cuPrior)/cuPrior*100 : null;
+    const chgCls = chg===null?'flat':chg>0?'up':'dn';
+    const chgTxt = chg===null?'—':(chg>0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%';
+    return `<tr>
+      <td>${w.size}</td>
+      <td>${w.cu?'$'+w.cu.toFixed(2):'—'}</td>
+      <td>${w.cu?'$'+(w.cu/1000).toFixed(4):'—'}</td>
+      <td>${w.al?'$'+w.al.toFixed(2):'—'}</td>
+      <td>${w.al?'$'+(w.al/1000).toFixed(4):'—'}</td>
+      <td>${cuPrior?'$'+cuPrior.toFixed(2):'—'}</td>
+      <td><span class="chg-pill ${chgCls}">${chgTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CONDUIT TABLE ──
+function renderConduitTable(snap, prior) {
+  const tbody = document.getElementById('conduit-body');
+  tbody.innerHTML = snap.conduit.map(c => {
+    const priorC = prior?.conduit?.find(p=>p.size===c.size);
+    const chg = priorC?.emt && c.emt ? (c.emt-priorC.emt)/priorC.emt*100 : null;
+    const chgCls = chg===null?'flat':chg>0?'up':'dn';
+    const chgTxt = chg===null?'—':(chg>0?'▲':'▼')+Math.abs(chg).toFixed(1)+'%';
+    const fmt = v => v?'$'+v.toFixed(2):'—';
+    return `<tr>
+      <td>${c.size}</td>
+      <td>${fmt(c.emt)}</td>
+      <td>${fmt(c.galv)}</td>
+      <td>${fmt(c.imc)}</td>
+      <td>${fmt(c.alum)}</td>
+      <td>${fmt(c.pvc)}</td>
+      <td>${priorC?.emt?'$'+priorC.emt.toFixed(2):'—'}</td>
+      <td><span class="chg-pill ${chgCls}">${chgTxt}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── HISTORY TABLE ──
+function populateBaselineSelect() {
+  const sel = document.getElementById('baseline-select');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="prior">Prior snapshot (default)</option>' +
+    DB.snapshots.map(s =>
+      `<option value="${s.date}">${fmtDate(s.date)} — $${s.avgCu?s.avgCu.toFixed(3):'?'}/ft Cu</option>`
+    ).join('');
+  // Restore selection if still valid
+  if (current && current !== 'prior' && DB.snapshots.find(s=>s.date===current)) {
+    sel.value = current;
+  } else {
+    sel.value = 'prior';
+  }
+}
+
+function renderHistoryTable() {
+  const tbody = document.getElementById('history-body');
+  const sel = document.getElementById('baseline-select');
+  const baselineDate = sel ? sel.value : 'prior';
+  const baseline = baselineDate !== 'prior' ? DB.snapshots.find(s=>s.date===baselineDate) : null;
+  const latest = DB.snapshots[DB.snapshots.length-1];
+
+  // Update column headers
+  const thCu = document.getElementById('th-cu-chg');
+  const thAl = document.getElementById('th-al-chg');
+  const desc = document.getElementById('baseline-desc');
+  if (baseline) {
+    const label = 'vs ' + fmtDate(baseline.date);
+    if (thCu) thCu.textContent = 'Cu Chg ' + label;
+    if (thAl) thAl.textContent = 'Al Chg ' + label;
+    if (desc) desc.textContent = `Showing % change from ${fmtDate(baseline.date)} to each date`;
+  } else {
+    if (thCu) thCu.textContent = 'Cu Chg';
+    if (thAl) thAl.textContent = 'Al Chg';
+    if (desc) desc.textContent = '';
+  }
+
+  const rows = [...DB.snapshots].reverse();
+  const pill = v => {
+    if (v===null) return '<span class="chg-pill flat">—</span>';
+    return `<span class="chg-pill ${v>0?'up':'dn'}">${v>0?'▲':'▼'}${Math.abs(v).toFixed(2)}%</span>`;
+  };
+
+  tbody.innerHTML = rows.map((s, revIdx) => {
+    const idx = DB.snapshots.length - 1 - revIdx;
+    const isLatest = s.date === latest?.date;
+    const isBaseline = s.date === baselineDate;
+
+    // Determine what to compare against
+    let compareSnap = null;
+    if (baseline) {
+      // Fixed baseline mode — compare every row to the selected baseline
+      // Skip showing change for the baseline row itself
+      compareSnap = isBaseline ? null : baseline;
+    } else {
+      // Default: compare to prior row
+      compareSnap = idx > 0 ? DB.snapshots[idx-1] : null;
+    }
+
+    const chgCu = compareSnap && compareSnap.avgCu && s.avgCu
+      ? (s.avgCu - compareSnap.avgCu) / compareSnap.avgCu * 100 : null;
+    const chgAl = compareSnap && compareSnap.avgAl && s.avgAl
+      ? (s.avgAl - compareSnap.avgAl) / compareSnap.avgAl * 100 : null;
+
+    // Row accent: highlight latest and baseline rows
+    let rowStyle = '';
+    let dateLabel = fmtDate(s.date);
+    if (isLatest && baseline) {
+      rowStyle = 'background:rgba(245,166,35,.06);';
+      dateLabel += ' <span style="font-size:10px;background:var(--accent2);color:var(--accent);padding:1px 5px;border-radius:3px;font-weight:700;margin-left:4px;">LATEST</span>';
+    }
+    if (isBaseline) {
+      rowStyle = 'background:rgba(74,158,255,.06);';
+      dateLabel += ' <span style="font-size:10px;background:var(--blue2);color:var(--blue);padding:1px 5px;border-radius:3px;font-weight:700;margin-left:4px;">BASELINE</span>';
+    }
+
+    // Cu→Al multiplier: multiply a CU price by this to get the AL equivalent
+    // e.g. Al=$1.00, Cu=$2.50 → multiplier = 0.40× (Al is 40% of Cu price)
+    const cuVsAl = s.avgCu && s.avgAl ? s.avgAl / s.avgCu : null;
+    const cuVsAlCell = cuVsAl !== null
+      ? `<span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text2);">${cuVsAl.toFixed(3)}×</span>`
+      : '—';
+
+    return `<tr style="${rowStyle}">
+      <td style="white-space:nowrap;">${dateLabel}</td>
+      <td>${s.avgCu?'$'+s.avgCu.toFixed(4):'—'}</td>
+      <td>${s.avgAl?'$'+s.avgAl.toFixed(4):'—'}</td>
+      <td style="text-align:center;">${cuVsAlCell}</td>
+      <td>${s.emt34?'$'+s.emt34.toFixed(2):'—'}</td>
+      <td>${s.emt1?'$'+s.emt1.toFixed(2):'—'}</td>
+      <td>${s.emt2?'$'+s.emt2.toFixed(2):'—'}</td>
+      <td>${s.galv34?'$'+s.galv34.toFixed(2):'—'}</td>
+      <td>${isBaseline ? '<span class="chg-pill flat">baseline</span>' : pill(chgCu)}</td>
+      <td>${isBaseline ? '<span class="chg-pill flat">baseline</span>' : pill(chgAl)}</td>
+      <td><button class="btn-danger btn" onclick="deleteSnapshot('${s.date}')">×</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── CHART ──
+function renderChart() {
+  if (DB.snapshots.length < 2) {
+    document.getElementById('chart-empty').style.display='flex';
+    document.getElementById('trend-chart').style.display='none';
+    return;
+  }
+  document.getElementById('chart-empty').style.display='none';
+  document.getElementById('trend-chart').style.display='block';
+
+  const labels = DB.snapshots.map(s=>fmtDate(s.date));
+  const datasets = [
+    { id:'cu_avg', label:'Avg Cu $/ft', data: DB.snapshots.map(s=>s.avgCu?+(s.avgCu.toFixed(4)):null), borderColor:'#f5a623', backgroundColor:'rgba(245,166,35,.08)', yAxisID:'y', tension:.3, pointRadius:4 },
+    { id:'al_avg', label:'Avg Al $/ft', data: DB.snapshots.map(s=>s.avgAl?+(s.avgAl.toFixed(4)):null), borderColor:'#4a9eff', backgroundColor:'rgba(74,158,255,.08)', yAxisID:'y', tension:.3, pointRadius:4 },
+    { id:'emt_34', label:'3/4" EMT /100\'', data: DB.snapshots.map(s=>s.emt34||null), borderColor:'#3ecf8e', backgroundColor:'rgba(62,207,142,.08)', yAxisID:'y2', tension:.3, pointRadius:4, borderDash:[4,3] },
+    { id:'galv_34', label:'3/4" Galv /100\'', data: DB.snapshots.map(s=>s.galv34||null), borderColor:'#a78bfa', backgroundColor:'rgba(167,139,250,.08)', yAxisID:'y2', tension:.3, pointRadius:4, borderDash:[4,3] },
+    { id:'emt_1', label:'1" EMT /100\'', data: DB.snapshots.map(s=>s.emt1||null), borderColor:'#60a5fa', backgroundColor:'rgba(96,165,250,.08)', yAxisID:'y2', tension:.3, pointRadius:4, borderDash:[4,3] },
+    { id:'emt_2', label:'2" EMT /100\'', data: DB.snapshots.map(s=>s.emt2||null), borderColor:'#f97316', backgroundColor:'rgba(249,115,22,.08)', yAxisID:'y2', tension:.3, pointRadius:4, borderDash:[4,3] },
+  ].map(d => ({ ...d, hidden: hiddenLines.has(d.id) }));
+
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+
+  const ctx = document.getElementById('trend-chart').getContext('2d');
+  chartInstance = new Chart(ctx, {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor:'#ffffff',
+          borderColor:'#dde1ee',
+          borderWidth:1,
+          titleColor:'#1e2340',
+          bodyColor:'#4a5278',
+          callbacks: {
+            label: ctx => {
+              const v = ctx.raw;
+              if (v===null) return null;
+              return ` ${ctx.dataset.label}: $${v.toFixed(ctx.datasetIndex<2?4:2)}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { grid:{color:'#dde1ee'}, ticks:{color:'#8892b0',font:{size:11}} },
+        y: { position:'left', grid:{color:'#dde1ee'}, ticks:{color:'#d4891a',font:{size:11},callback:v=>'$'+v.toFixed(3)}, title:{display:true,text:'$/ft (wire)',color:'#d4891a',font:{size:11}} },
+        y2: { position:'right', grid:{display:false}, ticks:{color:'#1a9e6a',font:{size:11},callback:v=>'$'+v.toFixed(0)}, title:{display:true,text:'$/100\' (conduit)',color:'#1a9e6a',font:{size:11}} },
+      }
+    }
+  });
+}
+
+function toggleLine(id, btn, onClass) {
+  if (hiddenLines.has(id)) {
+    hiddenLines.delete(id);
+    btn.className = 'chart-toggle '+onClass;
+  } else {
+    hiddenLines.add(id);
+    btn.className = 'chart-toggle';
+  }
+  renderChart();
+}
+
+// ── TABS ──
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+  if (name==='trend') { setTimeout(()=>renderChart(),50); }
+}
+
+// ── DELETE / CLEAR ──
+async function deleteSnapshot(date) {
+  if (!confirm('Delete snapshot for ' + date + '?')) return;
+  try {
+    await apiDelete(date);
+    DB.snapshots = DB.snapshots.filter(s => s.date !== date);
+    activeSnapshotIdx = null;
+    renderAll();
+  } catch(e) {
+    alert('Delete failed — ' + e.message);
+  }
+}
+
+function clearAll() {
+  if (!confirm('Delete ALL snapshot data? This cannot be undone.')) return;
+  DB = { snapshots: [] };
+  save();
+  activeSnapshotIdx = null;
+  renderAll();
+}
+
+// ── EXPORT CSV ──
+function exportHistory() {
+  if (!DB.snapshots.length) { alert('No data to export'); return; }
+  const rows = [['Date','Avg Cu $/ft','Avg Al $/ft','3/4" EMT','1" EMT','2" EMT','3/4" Galv']];
+  DB.snapshots.forEach(s=>rows.push([
+    s.date,
+    s.avgCu?.toFixed(4)||'',
+    s.avgAl?.toFixed(4)||'',
+    s.emt34?.toFixed(2)||'',
+    s.emt1?.toFixed(2)||'',
+    s.emt2?.toFixed(2)||'',
+    s.galv34?.toFixed(2)||'',
+  ]));
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download = 'estim8_commodity_history.csv';
+  a.click();
+}
+
+// ── UTILS ──
+function fmtDate(d) {
+  if (!d) return '—';
+  const [y,m,day] = d.split('-');
+  return `${m}/${day}/${y}`;
+}
+
+// ── LOAD CHART.JS ──
+function loadChartJs(cb) {
+  if (window.Chart) { cb(); return; }
+  const s = document.createElement('script');
+  s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+  s.onload = cb;
+  document.head.appendChild(s);
+}
+
+// ── INIT ──
+document.getElementById('quote-date').valueAsDate = new Date();
+loadChartJs(() => { loadData(); });
+</script>
+</body>
+</html>
