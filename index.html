@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title> Commodity Tracker</title>
+<title>Chris's Commodity Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
@@ -489,7 +489,7 @@ canvas#trend-chart { width: 100% !important; height: 300px; }
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <div class="topbar-logo">--- <span>Commodity Tracker</span></div>
+  <div class="topbar-logo">Chris's <span>Commodity Tracker</span></div>
   <div class="topbar-sep"></div>
   <div class="topbar-stat">
     <div class="topbar-stat-val" id="hdr-cu">—</div>
@@ -1488,12 +1488,16 @@ function hideCtxMenu() {
 }
 
 function ctxDelete() {
+  const date = ctxTargetDate;
   hideCtxMenu();
-  if (ctxTargetDate) deleteSnapshot(ctxTargetDate);
+  if (date) deleteSnapshot(date);
 }
 
 // Close context menu on any click elsewhere
-document.addEventListener('click', hideCtxMenu);
+document.addEventListener('click', e => {
+  const menu = document.getElementById('ctx-menu');
+  if (menu && !menu.contains(e.target)) hideCtxMenu();
+});
 document.addEventListener('keydown', e => { if(e.key==='Escape') hideCtxMenu(); });
 
 document.getElementById('quote-date').valueAsDate = new Date();
