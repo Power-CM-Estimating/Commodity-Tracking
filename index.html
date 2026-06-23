@@ -1,46 +1,47 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Chris's Commodity Tracker</title>
+<title>Historic Commodity Tracker</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root {
-  /* ── Sidebar / light blue ── */
-  --sb-bg:      #e8f0fe;
-  --sb-bg2:     #dce7fd;
-  --sb-bg3:     #c7d9fb;
-  --sb-border:  #b3c8f8;
-  --sb-border2: #85a9f3;
-  --sb-text:    #0f2060;
-  --sb-text2:   #2a4a9e;
-  --sb-text3:   #5570b8;
+  /* ── Sidebar / light blue-white ── */
+  --sb-bg:      #e6eef5;
+  --sb-bg2:     #d5e4f0;
+  --sb-bg3:     #bdd4e8;
+  --sb-border:  #9bbdd8;
+  --sb-border2: #6b9dc0;
+  --sb-text:    #001f38;
+  --sb-text2:   #003A66;
+  --sb-text3:   #4a7a9b;
 
   /* ── Main / white ── */
-  --bg:         #f0f4ff;
+  --bg:         #eef3f8;
   --bg2:        #ffffff;
-  --bg3:        #f5f7ff;
-  --bg4:        #eaefff;
-  --border:     #d8e0f8;
-  --border2:    #b8c6f0;
-  --text:       #0a1540;
-  --text2:      #1e3380;
-  --text3:      #6b7cc0;
+  --bg3:        #f4f8fc;
+  --bg4:        #e6eef5;
+  --border:     #d0dded;
+  --border2:    #b0c8de;
+  --text:       #001f38;
+  --text2:      #003A66;
+  --text3:      #5a7f9a;
 
   /* ── Topbar ── */
-  --bar-bg:     #1a3ad4;
-  --bar-border: #2548e8;
+  --bar-bg:     #003A66;
+  --bar-border: #004d88;
 
   /* ── Accent & status ── */
-  --accent:     #1a3ad4;
-  --accent2:    rgba(26,58,212,.10);
+  --accent:     #003A66;
+  --accent2:    rgba(0,58,102,.10);
   --green:      #059669;
   --green2:     rgba(5,150,105,.10);
   --red:        #dc2626;
   --red2:       rgba(220,38,38,.10);
-  --blue:       #1a3ad4;
-  --blue2:      rgba(26,58,212,.10);
+  --blue:       #003A66;
+  --blue2:      rgba(0,58,102,.10);
 
   --mono: 'Courier New', monospace;
   --head: 'Segoe UI', system-ui, sans-serif;
@@ -59,7 +60,7 @@ body {
 /* ── TOP BAR ── */
 .topbar {
   background: var(--bar-bg);
-  border-bottom: 3px solid #5b7fff;
+  border-bottom: 3px solid #0077cc;
   padding: 0 24px;
   height: 56px;
   display: flex;
@@ -75,7 +76,7 @@ body {
   letter-spacing: .02em;
   color: #fff;
 }
-.topbar-logo span { color: #a8c0ff; }
+.topbar-logo span { color: #7fc4f5; }
 .topbar-sub {
   font-size: 11px;
   color: rgba(255,255,255,.35);
@@ -93,7 +94,7 @@ body {
   font-family: var(--mono);
   font-size: 15px;
   font-weight: 700;
-  color: #a8c0ff;
+  color: #7fc4f5;
 }
 .topbar-stat-lbl {
   font-size: 10px;
@@ -239,8 +240,8 @@ body {
 }
 
 /* ── HISTORY ENTRY ── */
-.history-entry.active { border-left: 3px solid var(--accent); background: rgba(26,58,212,.08) !important; }
-.history-date { font-family: var(--mono); font-size: 12px; color: var(--accent); font-weight: 700; flex: 1; }
+.history-entry.active { border-left: 3px solid #003A66; background: rgba(0,58,102,.08) !important; }
+.history-date { font-family: var(--mono); font-size: 12px; color: #003A66; font-weight: 700; flex: 1; }
 .history-avg { font-family: var(--mono); font-size: 11px; color: var(--sb-text2); }
 .history-chg { font-family: var(--mono); font-size: 10px; padding: 2px 5px; border-radius: 3px; font-weight: 700; }
 .history-chg.up { background: var(--red2); color: var(--red); }
@@ -263,7 +264,7 @@ body {
 .tree-year-header:hover { background: var(--sb-bg2); }
 .tree-year-caret { font-size: 9px; color: var(--sb-text3); transition: transform .2s; flex-shrink: 0; }
 .tree-year-caret.open { transform: rotate(90deg); }
-.tree-year-label { font-family: var(--mono); font-size: 13px; font-weight: 800; color: #a8c0ff; flex: 1; }
+.tree-year-label { font-family: var(--mono); font-size: 13px; font-weight: 800; color: #003A66; flex: 1; }
 .tree-year-count { font-size: 10px; color: var(--sb-text3); background: var(--sb-bg); border: 1px solid var(--sb-border); border-radius: 10px; padding: 1px 7px; }
 .tree-months { display: none; }
 .tree-months.open { display: block; }
@@ -310,28 +311,30 @@ body {
 .tab-bar {
   display: flex;
   gap: 4px;
-  padding: 8px 12px;
-  background: var(--bar-bg);
+  padding: 8px 14px;
+  background: #002d52;
   border-bottom: none;
 }
 .tab-btn {
-  padding: 6px 16px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 4px;
-  color: rgba(255,255,255,.5);
+  padding: 7px 18px;
+  background: #ffffff;
+  border: none;
+  border-radius: 5px 5px 0 0;
+  color: #003A66;
   font-family: var(--head);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .04em;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .03em;
   cursor: pointer;
   transition: all .15s;
+  opacity: .45;
+  border-bottom: 3px solid transparent;
 }
-.tab-btn:hover { color: #fff; background: rgba(255,255,255,.12); }
+.tab-btn:hover { opacity: .75; }
 .tab-btn.active {
-  color: #fff;
-  background: var(--accent);
-  border-color: var(--accent);
+  opacity: 1;
+  border-bottom: 3px solid #003A66;
+  box-shadow: 0 2px 6px rgba(0,0,0,.15);
 }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
@@ -462,7 +465,7 @@ canvas#trend-chart { width: 100% !important; height: 300px; }
   font-family: var(--mono);
   font-size: 22px;
   font-weight: 800;
-  color: #a8c0ff;
+  color: #7fc4f5;
 }
 .stat-lbl {
   font-size: 10px;
@@ -486,7 +489,7 @@ canvas#trend-chart { width: 100% !important; height: 300px; }
 
 <!-- TOP BAR -->
 <div class="topbar">
-  <div class="topbar-logo">Chris's <span>Commodity Tracker</span></div>
+  <div class="topbar-logo">Historic <span>Commodity Tracker</span></div>
   <div class="topbar-sep"></div>
   <div class="topbar-stat">
     <div class="topbar-stat-val" id="hdr-cu">—</div>
@@ -670,7 +673,6 @@ canvas#trend-chart { width: 100% !important; height: 300px; }
                   <th>3/4" Galv</th>
                   <th id="th-cu-chg">Cu Chg</th>
                   <th id="th-al-chg">Al Chg</th>
-                  <th></th>
                 </tr>
               </thead>
               <tbody id="history-body"></tbody>
@@ -1301,7 +1303,7 @@ function renderHistoryTable() {
       ? `<span style="font-family:var(--mono);font-size:12px;font-weight:600;color:var(--text2);">${cuVsAl.toFixed(3)}×</span>`
       : '—';
 
-    return `<tr style="${rowStyle}">
+    return `<tr style="${rowStyle};cursor:context-menu;" oncontextmenu="showCtxMenu(event,'${s.date}')">
       <td style="white-space:nowrap;">${dateLabel}</td>
       <td>${s.avgCu?'$'+s.avgCu.toFixed(4):'—'}</td>
       <td>${s.avgAl?'$'+s.avgAl.toFixed(4):'—'}</td>
@@ -1312,7 +1314,6 @@ function renderHistoryTable() {
       <td>${s.galv34?'$'+s.galv34.toFixed(2):'—'}</td>
       <td>${isBaseline ? '<span class="chg-pill flat">baseline</span>' : pill(chgCu)}</td>
       <td>${isBaseline ? '<span class="chg-pill flat">baseline</span>' : pill(chgAl)}</td>
-      <td><button class="btn-danger btn" onclick="deleteSnapshot('${s.date}')">×</button></td>
     </tr>`;
   }).join('');
 }
@@ -1450,9 +1451,90 @@ function loadChartJs(cb) {
   document.head.appendChild(s);
 }
 
-// ── INIT ──
+// ── CONTEXT MENU ──
+let ctxTargetDate = null;
+
+function showCtxMenu(e, date) {
+  e.preventDefault();
+  ctxTargetDate = date;
+  const menu = document.getElementById('ctx-menu');
+  const deleteBtn = document.getElementById('ctx-delete');
+
+  // Only show delete if unlocked
+  deleteBtn.style.display = isUnlocked ? 'flex' : 'none';
+
+  // If not unlocked, show a hint instead
+  let hint = document.getElementById('ctx-hint');
+  if (!hint) {
+    hint = document.createElement('div');
+    hint.id = 'ctx-hint';
+    hint.style.cssText = 'padding:10px 16px;font-size:12px;color:var(--text3);';
+    menu.insertBefore(hint, deleteBtn);
+  }
+  hint.style.display = isUnlocked ? 'none' : 'block';
+  hint.textContent = isUnlocked ? '' : 'Enter admin password to delete';
+
+  // Position near cursor
+  const x = Math.min(e.clientX, window.innerWidth - 180);
+  const y = Math.min(e.clientY, window.innerHeight - 100);
+  menu.style.left = x + 'px';
+  menu.style.top  = y + 'px';
+  menu.style.display = 'block';
+}
+
+function hideCtxMenu() {
+  document.getElementById('ctx-menu').style.display = 'none';
+  ctxTargetDate = null;
+}
+
+function ctxDelete() {
+  hideCtxMenu();
+  if (ctxTargetDate) deleteSnapshot(ctxTargetDate);
+}
+
+// Close context menu on any click elsewhere
+document.addEventListener('click', hideCtxMenu);
+document.addEventListener('keydown', e => { if(e.key==='Escape') hideCtxMenu(); });
+
 document.getElementById('quote-date').valueAsDate = new Date();
 loadChartJs(() => { loadData(); });
 </script>
+<!-- Right-click context menu -->
+<div id="ctx-menu" style="
+  display:none;
+  position:fixed;
+  background:#fff;
+  border:1px solid var(--border2);
+  border-radius:6px;
+  box-shadow:0 4px 16px rgba(0,0,0,.15);
+  z-index:9999;
+  min-width:160px;
+  overflow:hidden;
+">
+  <div id="ctx-delete" onclick="ctxDelete()" style="
+    padding:10px 16px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--red);
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    transition:background .12s;
+  " onmouseover="this.style.background='var(--red2)'" onmouseout="this.style.background=''">
+    🗑 Delete Snapshot
+  </div>
+  <div onclick="hideCtxMenu()" style="
+    padding:8px 16px;
+    font-size:12px;
+    color:var(--text3);
+    cursor:pointer;
+    border-top:1px solid var(--border);
+    transition:background .12s;
+  " onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
+    Cancel
+  </div>
+</div>
+
 </body>
 </html>
