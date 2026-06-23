@@ -44,6 +44,8 @@ exports.handler = async (event) => {
     }
     try {
       const snap = JSON.parse(event.body);
+      // Password verification test — don't save
+      if (snap._test) return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
       if (!snap.date) return { statusCode: 400, headers, body: JSON.stringify({ error: 'Missing date' }) };
       await store.setJSON(snap.date, snap);
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true }) };
